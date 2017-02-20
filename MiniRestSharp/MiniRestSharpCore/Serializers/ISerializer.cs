@@ -16,7 +16,7 @@
 
 #endregion
 
-namespace RestSharp.Serializers
+namespace MiniRestSharpCore.Serializers
 {
     public interface ISerializer
     {
