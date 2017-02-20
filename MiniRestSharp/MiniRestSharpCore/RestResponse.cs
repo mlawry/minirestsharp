@@ -21,6 +21,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using MiniRestSharpCore.Extensions;
+using MiniRestSharpCore.Deserializers;
 
 namespace MiniRestSharpCore
 {
@@ -65,15 +66,6 @@ namespace MiniRestSharpCore
         /// Encoding of the response content
         /// </summary>
         public string ContentEncoding { get; set; }
-
-        /// <summary>
-        /// String representation of response content
-        /// </summary>
-        public string Content
-        {
-            get { return this.content ?? (this.content = this.RawBytes.AsString()); }
-            set { this.content = value; }
-        }
 
         /// <summary>
         /// HTTP response status code
@@ -135,11 +127,49 @@ namespace MiniRestSharpCore
             return string.Format("StatusCode: {0}, Content-Type: {1}, Content-Length: {2})",
                 this.StatusCode, this.ContentType, this.ContentLength);
         }
+
+
+        /// <summary>
+        /// Get a string representation of response content.
+        /// Attempts to convert RawBytes into a string, using its byte order mark to determine the right encoding.
+        /// If no byte order mark then uses UTF-8.
+        /// 
+        /// Note coversion is only done the first time, the resulting string is cached and returned on subsequent calls.
+        /// </summary>
+        public string GetContent()
+        {
+            return this.content ?? (this.content = this.RawBytes.AsString());
+        }
     }
 
     /// <summary>
     /// Container for data sent back from API
     /// </summary>
     [DebuggerDisplay("{DebuggerDisplay()}")]
-    public class RestResponse : RestResponseBase, IRestResponse { }
+    public class RestResponse : RestResponseBase, IRestResponse
+    {
+        /// <summary>
+        /// The deserializer to use in GetContent[T]().
+        /// </summary>
+        public IDeserializer ContentDeserializer { get; set; }
+
+
+        /// <summary>
+        /// Use ContentDeserializer to convert this response into a typed object.
+        /// If ContentDeserializer is null then returns default(T), which is null for reference types.
+        /// Note the ContentDeserializer may also return null.
+        /// </summary>
+        public T GetContent<T>()
+        {
+            // Only continue if there is a handler defined else there is no way to deserialize the data.
+            // This can happen when a request returns for example a 404 page instead of the requested JSON/XML resource
+            if (this.ContentDeserializer != null)
+            {
+                return this.ContentDeserializer.Deserialize<T>(this);
+            }
+
+            return default(T);
+        }
+
+    }
 }

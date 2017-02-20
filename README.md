@@ -14,6 +14,8 @@ Major changes from the normal RestSharp API include:
 
 * JSON and XML serialization specific code has been removed.
 
+* Deserialization is done in IRestResponse, so you can make sure the request was successful first.
+
 * Only supports one asynchronous `ExecuteTaskAsync` method.
 
 * No support for proxy, pipelining, client certificates, PreAuthenticate and other advanced features.

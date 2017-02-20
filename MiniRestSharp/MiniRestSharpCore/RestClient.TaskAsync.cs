@@ -57,6 +57,11 @@ namespace MiniRestSharpCore
                 response = ConvertToRestResponse(request, rawResponse);
                 response.Request = request;
                 response.Request.IncreaseNumAttempts();
+
+                if (rawResponse.ContentType != null)
+                {
+                    response.ContentDeserializer = this.GetHandler(rawResponse.ContentType);
+                }
             }
             catch (Exception ex)
             {

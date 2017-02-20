@@ -1,3 +1,4 @@
+using MiniRestSharpCore.Deserializers;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -31,11 +32,6 @@ namespace MiniRestSharpCore
         /// Encoding of the response content
         /// </summary>
         string ContentEncoding { get; set; }
-
-        /// <summary>
-        /// String representation of response content
-        /// </summary>
-        string Content { get; set; }
 
         /// <summary>
         /// HTTP response status code
@@ -89,6 +85,23 @@ namespace MiniRestSharpCore
         /// <remarks>Will contain only network transport or framework exceptions thrown during the request.
         /// HTTP protocol errors are handled by RestSharp and will not appear here.</remarks>
         Exception ErrorException { get; set; }
-    }
 
+        IDeserializer ContentDeserializer { get; set; }
+
+        /// <summary>
+        /// Get a string representation of response content.
+        /// Attempts to convert RawBytes into a string, using its byte order mark to determine the right encoding.
+        /// If no byte order mark then uses UTF-8.
+        /// </summary>
+        string GetContent();
+
+        /// <summary>
+        /// Get a typed object representation of response content.
+        /// Uses the deserializer that best matches the response Content-Type.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        T GetContent<T>();
+
+    }
 }

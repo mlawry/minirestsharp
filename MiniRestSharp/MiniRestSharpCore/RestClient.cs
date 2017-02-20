@@ -530,7 +530,6 @@ namespace MiniRestSharpCore
         {
             RestResponse restResponse = new RestResponse
             {
-                Content = httpResponse.Content,
                 ContentEncoding = httpResponse.ContentEncoding,
                 ContentLength = httpResponse.ContentLength,
                 ContentType = httpResponse.ContentType,
