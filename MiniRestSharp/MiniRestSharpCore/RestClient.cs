@@ -399,8 +399,15 @@ namespace MiniRestSharpCore
             // Add Accept header based on registered deserializers if none has been set by the caller.
             if (request.Parameters.All(p2 => p2.Name.ToLowerInvariant() != "accept"))
             {
-                string accepts = string.Join(", ", this.AcceptTypes.ToArray());
-
+                string accepts;
+                if (this.AcceptTypes == null || this.AcceptTypes.Count == 0)
+                {
+                    accepts = "*"; // MiniRestSharp has no default deserializers, so accept everything by default.
+                }
+                else
+                {
+                    accepts = string.Join(", ", this.AcceptTypes.ToArray());
+                }
                 request.AddParameter("Accept", accepts, ParameterType.HttpHeader);
             }
 
@@ -410,7 +417,7 @@ namespace MiniRestSharpCore
 
             http.UserAgent = userAgent.HasValue()
                 ? userAgent
-                : "RestSharp/" + version;
+                : "MiniRestSharp/" + version;
 
             int timeout = request.Timeout > 0
                 ? request.Timeout

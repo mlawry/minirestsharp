@@ -114,13 +114,7 @@ namespace MiniRestSharpCore
         /// </summary>
         public bool UseDefaultCredentials { get; set; }
 
-        private Encoding encoding = Encoding.UTF8;
-
-        public Encoding Encoding
-        {
-            get { return this.encoding; }
-            set { this.encoding = value; }
-        }
+        public Encoding Encoding { get; set; }
 
         /// <summary>
         /// HTTP headers to be sent with request
@@ -325,7 +319,7 @@ namespace MiniRestSharpCore
                 Stream webResponseStream = webResponse.GetResponseStream();
 
 
-                if (string.Equals(webResponse.Headers[HttpRequestHeader.ContentEncoding], "gzip", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(webResponse.Headers[HttpResponseHeader.ContentEncoding], "gzip", StringComparison.OrdinalIgnoreCase))
                 {
                     GZipStream gzStream = new GZipStream(webResponseStream, CompressionMode.Decompress);
 

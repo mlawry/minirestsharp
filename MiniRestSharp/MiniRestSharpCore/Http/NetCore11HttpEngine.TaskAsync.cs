@@ -188,7 +188,7 @@ namespace MiniRestSharpCore
             webRequest.UseDefaultCredentials = this.UseDefaultCredentials;
             //webRequest.ServicePoint.Expect100Continue = false;
             // .NET Core has no support for ServicePoint, but a new ContinueTimeout property instead.
-            webRequest.ContinueTimeout = 2000; // If server does not send 100-Continue within this time, we send POST entity-body anyway.
+            webRequest.ContinueTimeout = 1000; // If server does not send 100-Continue within this time, we send POST entity-body anyway.
 
             this.AppendHeaders(webRequest);
             this.AppendCookies(webRequest);
@@ -237,7 +237,7 @@ namespace MiniRestSharpCore
 
             if (!this.HasFiles && !this.AlwaysMultipartFormData)
             {
-                return this.encoding.GetByteCount(this.RequestBody);
+                return this.Encoding.GetByteCount(this.RequestBody);
             }
 
             // calculate length for multipart form
