@@ -3,12 +3,19 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <RootNamespace>MiniRestSharpCore</RootNamespace>
-    <PackageId>YTML.MiniRestSharpCore</PackageId>
+    <PackageId>YTML.MiniRestSharp.Core</PackageId>
     <Authors></Authors>
     <Company></Company>
     <Description>A cut down version of the RestSharp API for .NET Core 1.1.</Description>
     <PackageLicenseUrl>https://github.com/mlawry/minirestsharp/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/mlawry/minirestsharp</PackageProjectUrl>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+    <FileVersion>1.1.0.0</FileVersion>
+    <Version>1.1.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netcoreapp1.1\MiniRestSharpCore.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
