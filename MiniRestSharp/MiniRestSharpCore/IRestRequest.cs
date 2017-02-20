@@ -20,7 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using RestSharp.Serializers;
+using MiniRestSharpCore.Serializers;
 
 namespace MiniRestSharpCore
 {

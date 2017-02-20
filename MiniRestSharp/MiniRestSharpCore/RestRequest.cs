@@ -16,7 +16,7 @@
 
 #endregion
 
-using RestSharp.Serializers;
+using MiniRestSharpCore.Serializers;
 using System;
 using System.Collections.Generic;
 using System.IO;
