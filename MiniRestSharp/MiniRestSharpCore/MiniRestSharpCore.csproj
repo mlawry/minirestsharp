@@ -3,6 +3,12 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp1.1</TargetFramework>
     <RootNamespace>MiniRestSharpCore</RootNamespace>
+    <PackageId>YTML.MiniRestSharpCore</PackageId>
+    <Authors></Authors>
+    <Company></Company>
+    <Description>A cut down version of the RestSharp API for .NET Core 1.1.</Description>
+    <PackageLicenseUrl>https://github.com/mlawry/minirestsharp/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/mlawry/minirestsharp</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
