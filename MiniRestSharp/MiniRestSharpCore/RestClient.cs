@@ -402,7 +402,7 @@ namespace MiniRestSharpCore
                 string accepts;
                 if (this.AcceptTypes == null || this.AcceptTypes.Count == 0)
                 {
-                    accepts = "*"; // MiniRestSharp has no default deserializers, so accept everything by default.
+                    accepts = "*/*"; // MiniRestSharp has no default deserializers, so accept everything by default.
                 }
                 else
                 {
