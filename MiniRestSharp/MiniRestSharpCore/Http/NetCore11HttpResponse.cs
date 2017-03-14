@@ -1,21 +1,25 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Text;
 
 namespace MiniRestSharpCore.Http
 {
     /// <summary>
-    /// Equivalent to HttpWebResponse, based on that classes' code.
+    /// Equivalent to HttpWebResponse.
     /// </summary>
     internal class NetCore11HttpResponse : WebResponse
     {
+        private const string FIELD_SET_COOKIE = "Set-Cookie";
+
+
         private HttpResponseMessage mResponse;
-        private Dictionary<string, IEnumerable<string>> mHeaders;
+        private WebHeaderCollection mHeaders;
+        private Dictionary<string, IEnumerable<string>> mHeaders2;
+        private CookieCollection mCookies;
 
 
         internal NetCore11HttpResponse(HttpResponseMessage responseMessage)
@@ -28,7 +32,7 @@ namespace MiniRestSharpCore.Http
         {
             get
             {
-                CheckDisposed();
+                VerifyDisposed();
                 long? length = mResponse?.Content?.Headers?.ContentLength;
                 return length ?? -1;
             }
@@ -39,7 +43,7 @@ namespace MiniRestSharpCore.Http
         {
             get
             {
-                CheckDisposed();
+                VerifyDisposed();
 
                 MediaTypeHeaderValue typeValue = mResponse?.Content?.Headers?.ContentType;
                 if (typeValue == null)
@@ -56,32 +60,53 @@ namespace MiniRestSharpCore.Http
         {
             get
             {
-                CheckDisposed();
-                return _cookies;
+                VerifyDisposed();
+                if (mCookies == null)
+                {
+                    mCookies = new CookieCollection();
+                    if (mResponse?.Headers != null)
+                    {
+                        IEnumerable<string> setCookieValues;
+                        if (mResponse.Headers.TryGetValues(FIELD_SET_COOKIE, out setCookieValues))
+                        {
+                            foreach (string setCookieHeader in setCookieValues)
+                            {
+                                Dictionary<string, string> cookieDict = DecodeSetCookie(setCookieHeader);
+
+                                var cookie = new Cookie();
+                                cookie.
+                            }
+                        }
+                    }
+                }
+                return mCookies;
             }
         }
 
 
-        public Dictionary<string, IEnumerable<string>> Headers2
+        /// <summary>
+        /// Returns only the first value for each unique header name.
+        /// </summary>
+        public override WebHeaderCollection Headers
         {
             get
             {
-                CheckDisposed();
+                VerifyDisposed();
                 if (mHeaders == null)
                 {
-                    mHeaders = new Dictionary<string, IEnumerable<string>>();
+                    mHeaders = new WebHeaderCollection();
                     if (mResponse?.Headers != null)
                     {
                         foreach (KeyValuePair<string, IEnumerable<string>> header in mResponse.Headers)
                         {
-                            mHeaders[header.Key] = header.Value;
+                            mHeaders[header.Key] = header.Value.First();
                         }
 
                         if (mResponse?.Content?.Headers != null)
                         {
                             foreach (KeyValuePair<string, IEnumerable<string>> header in mResponse.Content.Headers)
                             {
-                                mHeaders[header.Key] = header.Value;
+                                mHeaders[header.Key] = header.Value.First();
                             }
                         }
                     }
@@ -91,14 +116,43 @@ namespace MiniRestSharpCore.Http
         }
 
 
+        /// <summary>
+        /// Returns all header values.
+        /// </summary>
+        public Dictionary<string, IEnumerable<string>> Headers2
+        {
+            get
+            {
+                VerifyDisposed();
+                if (mHeaders2 == null)
+                {
+                    mHeaders2 = new Dictionary<string, IEnumerable<string>>();
+                    if (mResponse?.Headers != null)
+                    {
+                        foreach (KeyValuePair<string, IEnumerable<string>> header in mResponse.Headers)
+                        {
+                            mHeaders2[header.Key] = header.Value;
+                        }
+
+                        if (mResponse?.Content?.Headers != null)
+                        {
+                            foreach (KeyValuePair<string, IEnumerable<string>> header in mResponse.Content.Headers)
+                            {
+                                mHeaders2[header.Key] = header.Value;
+                            }
+                        }
+                    }
+                }
+                return mHeaders2;
+            }
+        }
+
+
         public override Uri ResponseUri
         {
             get
             {
-                CheckDisposed();
-
-                // The underlying System.Net.Http API will automatically update
-                // the .RequestUri property to be the final URI of the response.
+                VerifyDisposed();
                 return mResponse.RequestMessage.RequestUri;
             }
         }
@@ -107,7 +161,7 @@ namespace MiniRestSharpCore.Http
         public HttpStatusCode StatusCode {
             get
             {
-                CheckDisposed();
+                VerifyDisposed();
                 return mResponse.StatusCode;
             }
         }
@@ -117,7 +171,7 @@ namespace MiniRestSharpCore.Http
         {
             get
             {
-                CheckDisposed();
+                VerifyDisposed();
                 return mResponse.ReasonPhrase;
             }
         }
@@ -134,28 +188,68 @@ namespace MiniRestSharpCore.Http
 
         public override Stream GetResponseStream()
         {
-            CheckDisposed();
+            VerifyDisposed();
             return mResponse.Content.ReadAsStreamAsync().GetAwaiter().GetResult();
         }
 
 
         protected override void Dispose(bool disposing)
         {
-            var httpResponseMessage = mResponse;
-            if (httpResponseMessage != null)
+            var response = mResponse;
+            if (response != null)
             {
-                httpResponseMessage.Dispose();
+                response.Dispose();
                 mResponse = null;
             }
         }
 
 
-        private void CheckDisposed()
+        private void VerifyDisposed()
         {
             if (mResponse == null)
             {
-                throw new ObjectDisposedException(this.GetType().ToString());
+                throw new ObjectDisposedException("This object has been disposed.");
             }
+        }
+
+
+        /// <summary>
+        /// Decodes the Set-Cookie header string in a HTTP response into key value pairs, where the key is attribute name
+        /// and value is attribute value. If cookieHeaderString is null or invalid, returns empty dictionary.
+        /// If attribute does not have a value (e.g. HttpOnly), then an empty string will be used as the value.
+        /// Does not return null.
+        /// </summary>
+        private static List<KeyValuePair<string, string>> DecodeSetCookie(string setCookieHeaderString)
+        {
+            var result = new List<KeyValuePair<string, string>>();
+
+            if (string.IsNullOrEmpty(setCookieHeaderString))
+            {
+                return result;
+            }
+
+            string[] keyValueArray = setCookieHeaderString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            if (keyValueArray == null || keyValueArray.Length == 0)
+            {
+                return result;
+            }
+
+            foreach (string keyValuePair in keyValueArray)
+            {
+                string trimmedCookieItem = keyValuePair.Trim(' ');
+                string[] kvPair = trimmedCookieItem.Split(new char[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
+                if (kvPair != null && kvPair.Length == 2)
+                {
+                    result[kvPair[0]] = kvPair[1];
+                }
+                else if (kvPair != null && kvPair.Length == 1)
+                {
+                    // Attribute with just a key, e.g. HttpOnly
+                    result[kvPair[0]] = "";
+                }
+            }
+
+            return result;
         }
 
     }
