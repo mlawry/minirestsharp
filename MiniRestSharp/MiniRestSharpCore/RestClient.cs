@@ -69,6 +69,17 @@ namespace MiniRestSharpCore
         /// Factory implementation to create a network communication engine.
         /// </summary>
         public IHttpFactory HttpFactory = new Http.HttpEngineFactory();
+        
+        /// <summary>
+        /// Maximum number of redirects to follow if FollowRedirects is true
+        /// </summary>
+        public int? MaxRedirects { get; set; }
+
+        /// <summary>
+        /// Default is true. Determine whether or not requests that result in 
+        /// HTTP status codes of 3xx should follow returned redirect
+        /// </summary>
+        public bool FollowRedirects { get; set; }
 
         /// <summary>
         /// The CookieContainer used for requests made by this client instance
@@ -84,11 +95,6 @@ namespace MiniRestSharpCore
         /// Timeout in milliseconds to use for requests made by this client instance
         /// </summary>
         public int Timeout { get; set; }
-
-        /// <summary>
-        /// The number of milliseconds before the writing or reading times out.
-        /// </summary>
-        public int ReadWriteTimeout { get; set; }
 
         /// <summary>
         /// Whether to invoke async callbacks using the SynchronizationContext.Current captured when invoked
@@ -123,6 +129,8 @@ namespace MiniRestSharpCore
             this.DefaultParameters = new List<Parameter>();
 
             // There are no default handlers.
+
+            this.FollowRedirects = true;
         }
 
         /// <summary>
@@ -426,15 +434,6 @@ namespace MiniRestSharpCore
             if (timeout > 0)
             {
                 http.Timeout = timeout;
-            }
-
-            int readWriteTimeout = request.ReadWriteTimeout > 0
-                ? request.ReadWriteTimeout
-                : this.ReadWriteTimeout;
-
-            if (readWriteTimeout > 0)
-            {
-                http.ReadWriteTimeout = readWriteTimeout;
             }
 
             if (request.Credentials != null)

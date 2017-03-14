@@ -21,9 +21,11 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
-namespace MiniRestSharpCore
+namespace MiniRestSharpCore.Http
 {
     /// <summary>
     /// HttpWebRequest wrapper (sync methods)
@@ -53,25 +55,25 @@ namespace MiniRestSharpCore
 
         private async Task<HttpResponse> GetStyleMethodInternal(string method)
         {
-            HttpWebRequest webRequest = this.ConfigureWebRequest(method, this.Url);
+            NetCore11HttpRequest request = this.ConfigureWebRequest(method, this.Url);
 
             if (this.HasBody && (method == "DELETE" || method == "OPTIONS"))
             {
-                webRequest.ContentType = this.RequestContentType;
-                await this.WriteRequestBody(webRequest);
+                request.RequestMessage.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(this.RequestContentType);
+                this.WriteRequestBody(request);
             }
 
-            return await this.GetResponse(webRequest);
+            return await this.GetResponse(request);
         }
 
         private async Task<HttpResponse> PostPutInternal(string method)
         {
-            HttpWebRequest webRequest = this.ConfigureWebRequest(method, this.Url);
+            NetCore11HttpRequest request = this.ConfigureWebRequest(method, this.Url);
 
-            this.PreparePostBody(webRequest);
+            this.PreparePostBody(request.RequestMessage);
 
-            await this.WriteRequestBody(webRequest);
-            return await this.GetResponse(webRequest);
+            this.WriteRequestBody(request);
+            return await this.GetResponse(request);
         }
 
         partial void AddSyncHeaderActions()
@@ -110,13 +112,13 @@ namespace MiniRestSharpCore
             httpResponse.ResponseStatus = ResponseStatus.Error;
         }
 
-        private async Task<HttpResponse> GetResponse(HttpWebRequest request)
+        private async Task<HttpResponse> GetResponse(NetCore11HttpRequest request)
         {
             HttpResponse response = new HttpResponse { ResponseStatus = ResponseStatus.None };
 
             try
             {
-                HttpWebResponse webResponse = await GetRawResponse(request);
+                NetCore11HttpResponse webResponse = await GetRawResponse(request);
 
                 this.ExtractResponseData(response, webResponse);
             }
@@ -128,11 +130,11 @@ namespace MiniRestSharpCore
             return response;
         }
 
-        private static async Task<HttpWebResponse> GetRawResponse(HttpWebRequest request)
+        private static async Task<NetCore11HttpResponse> GetRawResponse(NetCore11HttpRequest request)
         {
             try
             {
-                return (HttpWebResponse) await request.GetResponseAsync();
+                return await request.GetResponseAsync();
             }
             catch (WebException ex)
             {
@@ -142,23 +144,24 @@ namespace MiniRestSharpCore
                 // transport exception (ex: connection timeout) and
                 // rethrow the exception
 
-                if (ex.Response is HttpWebResponse)
+                var exResponse = ex.Response as NetCore11HttpResponse;
+                if (exResponse != null)
                 {
-                    return ex.Response as HttpWebResponse;
+                    return exResponse;
                 }
 
                 throw;
             }
         }
 
-        private async Task WriteRequestBody(HttpWebRequest webRequest)
+        private void WriteRequestBody(NetCore11HttpRequest webRequest)
         {
             if (this.HasBody || this.HasFiles || this.AlwaysMultipartFormData)
             {
-                webRequest.Headers[HttpRequestHeader.ContentLength] = this.CalculateContentLength().ToString();
+                webRequest.RequestMessage.Content.Headers.ContentLength = this.CalculateContentLength();
             }
 
-            using (Stream requestStream = await webRequest.GetRequestStreamAsync())
+            using (Stream requestStream = webRequest.GetRequestStreamAsync())
             {
                 if (this.HasFiles || this.AlwaysMultipartFormData)
                 {
@@ -175,54 +178,52 @@ namespace MiniRestSharpCore
             }
         }
 
-        // TODO: Try to merge the shared parts between ConfigureWebRequest and ConfigureAsyncWebRequest (quite a bit of code
-        // TODO: duplication at the moment).
-        private HttpWebRequest ConfigureWebRequest(string method, Uri url)
+        private NetCore11HttpRequest ConfigureWebRequest(string method, Uri url)
         {
-            HttpWebRequest webRequest = (HttpWebRequest) WebRequest.Create(url);
+            var request = new NetCore11HttpRequest(method, url);
 
-            webRequest.UseDefaultCredentials = this.UseDefaultCredentials;
-            //webRequest.ServicePoint.Expect100Continue = false;
-            // .NET Core has no support for ServicePoint, but a new ContinueTimeout property instead.
-            webRequest.ContinueTimeout = 1000; // If server does not send 100-Continue within this time, we send POST entity-body anyway.
+            ////////// 1. Configure HttpRequestMessage.
+            this.AppendHeaders(request.RequestMessage);
 
-            this.AppendHeaders(webRequest);
-            this.AppendCookies(webRequest);
-
-            webRequest.Method = method;
-
-            // make sure Content-Length header is always sent since default is -1
-            if (!this.HasFiles && !this.AlwaysMultipartFormData)
-            {
-                webRequest.Headers[HttpRequestHeader.ContentLength] = "0";
-            }
-
-            //webRequest.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None;
-            webRequest.Headers[HttpRequestHeader.Te] = "deflate, gzip, identity";
+            // Override certain headers that are controlled by RestSharp.
+            request.RequestMessage.Headers.TE.Clear();
+            request.RequestMessage.Headers.TE.Add(new TransferCodingWithQualityHeaderValue("deflate"));
+            request.RequestMessage.Headers.TE.Add(new TransferCodingWithQualityHeaderValue("gzip"));
+            request.RequestMessage.Headers.TE.Add(new TransferCodingWithQualityHeaderValue("identity"));
 
             if (this.UserAgent.HasValue())
             {
-                webRequest.Headers[HttpRequestHeader.UserAgent] = this.UserAgent;
+                request.RequestMessage.Headers.UserAgent.Add(ProductInfoHeaderValue.Parse(this.UserAgent));
             }
 
-            //if (this.Timeout != 0)
-            //{
-            //    webRequest.Timeout = this.Timeout;
-            //}
+            ////////// 2. Configure HttpClientHandler
+            this.AppendCookies(request.RequestHandler, url);
 
-            //if (this.ReadWriteTimeout != 0)
-            //{
-            //    webRequest.ReadWriteTimeout = this.ReadWriteTimeout;
-            //}
+            // This matches with request.Headers.TE header.
+            request.RequestHandler.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None;
 
+            // Handler credentials.
+            request.RequestHandler.UseDefaultCredentials = this.UseDefaultCredentials;
             if (this.Credentials != null)
             {
-                webRequest.Credentials = this.Credentials;
+                request.RequestHandler.Credentials = this.Credentials;
             }
 
-            return webRequest;
-        }
+            // redirects
+            request.RequestHandler.AllowAutoRedirect = this.FollowRedirects;
+            if (this.FollowRedirects && this.MaxRedirects.HasValue)
+            {
+                request.RequestHandler.MaxAutomaticRedirections = this.MaxRedirects.Value;
+            }
 
+            ////////// 3. Configure HttpClient
+            if (this.Timeout != 0)
+            {
+                request.RequestClient.Timeout = TimeSpan.FromMilliseconds(this.Timeout);
+            }
+
+            return request;
+        }
 
         private long CalculateContentLength()
         {

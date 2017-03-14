@@ -4,7 +4,9 @@ A cut down version of the [RestSharp](http://github.com/restsharp/RestSharp) API
 
 The code is based on commit e7c65df751427298cb59f5456bbf1f59967996be (27 Apr 2016) from the *master* branch.
 
-The HTTP engine implementation uses .NET Core's [System.Net.HttpWebRequest](https://docs.microsoft.com/en-us/dotnet/core/api/system.net.httpwebrequest) and [System.Net.HttpWebResponse](https://docs.microsoft.com/en-us/dotnet/core/api/system.net.httpwebresponse) classes.
+The HTTP engine implementation uses .NET Core's
+[System.Net.Http.HttpClient](https://docs.microsoft.com/en-us/dotnet/core/api/system.net.http.httpclient) and
+[System.Net.Http.HttpClientHandler](https://docs.microsoft.com/en-us/dotnet/core/api/system.net.http.httpclienthandler) classes.
 
 Major changes from the normal RestSharp API include:
 
@@ -20,9 +22,7 @@ Major changes from the normal RestSharp API include:
 
 * No support for proxy, pipelining, client certificates, PreAuthenticate and other advanced features.
 
-* No FollowRedirects support. RestClient always behaves as though `RestClient.FollowRedirects` is false.
-
-* Timeout and ReadWriteTimeout are not supported at the moment, although they are still available for use. Hopefully they are implemented in a future HttpWebRequest revision.
+* ReadWriteTimeout is not supported.
 
 Here is the modified code using the example from RestSharp's [README.markdown](https://github.com/restsharp/RestSharp/blob/master/README.markdown)
 

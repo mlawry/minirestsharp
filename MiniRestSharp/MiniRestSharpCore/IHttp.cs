@@ -42,7 +42,9 @@ namespace MiniRestSharpCore
 
         int Timeout { get; set; }
 
-        int ReadWriteTimeout { get; set; }
+        bool FollowRedirects { get; set; }
+
+        int? MaxRedirects { get; set; }
 
         bool UseDefaultCredentials { get; set; }
 

@@ -28,7 +28,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace MiniRestSharpCore
+namespace MiniRestSharpCore.Http
 {
     /// <summary>
     /// HttpWebRequest wrapper.
@@ -86,11 +86,6 @@ namespace MiniRestSharpCore
         public int Timeout { get; set; }
 
         /// <summary>
-        /// The number of milliseconds before the writing or reading times out.
-        /// </summary>
-        public int ReadWriteTimeout { get; set; }
-
-        /// <summary>
         /// System.Net.ICredentials to be sent with request
         /// </summary>
         public ICredentials Credentials { get; set; }
@@ -109,7 +104,17 @@ namespace MiniRestSharpCore
         /// Collection of files to be sent with request
         /// </summary>
         public IList<HttpFile> Files { get; private set; }
-        
+
+        /// <summary>
+        /// Whether or not HTTP 3xx response redirects should be automatically followed
+        /// </summary>
+        public bool FollowRedirects { get; set; }
+
+        /// <summary>
+        /// Maximum number of automatic redirects to follow if FollowRedirects is true
+        /// </summary>
+        public int? MaxRedirects { get; set; }
+
         /// <summary>
         /// Determine whether or not the "default credentials" (e.g. the user account under which the current process is running)
         /// will be sent along to the server.
@@ -261,9 +266,9 @@ namespace MiniRestSharpCore
             }
         }
 
-        private void AppendCookies(HttpWebRequest webRequest)
+        private void AppendCookies(HttpClientHandler handler, Uri requestUri)
         {
-            webRequest.CookieContainer = this.CookieContainer ?? new CookieContainer();
+            handler.CookieContainer = this.CookieContainer ?? new CookieContainer();
 
             foreach (HttpCookie httpCookie in this.Cookies)
             {
@@ -271,11 +276,20 @@ namespace MiniRestSharpCore
                                 {
                                     Name = httpCookie.Name,
                                     Value = httpCookie.Value,
-                                    Domain = webRequest.RequestUri.Host
+                                    Domain = requestUri.Host
                                 };
 
-                Uri uri = webRequest.RequestUri;
-                webRequest.CookieContainer.Add(new Uri(string.Format("{0}://{1}", uri.Scheme, uri.Host)), cookie);
+                handler.CookieContainer.Add(new Uri(string.Format("{0}://{1}", requestUri.Scheme, requestUri.Host)), cookie);
+            }
+
+            if (handler.CookieContainer == null || handler.CookieContainer.Count == 0)
+            {
+                handler.CookieContainer = null;
+                handler.UseCookies = false;
+            }
+            else
+            {
+                handler.UseCookies = true;
             }
         }
 
@@ -296,20 +310,21 @@ namespace MiniRestSharpCore
             return querystring.ToString();
         }
 
-        private void PreparePostBody(HttpWebRequest webRequest)
+        private void PreparePostBody(HttpRequestMessage request)
         {
             if (this.HasFiles || this.AlwaysMultipartFormData)
             {
-                webRequest.ContentType = GetMultipartFormContentType();
+                string contentTypeStr = GetMultipartFormContentType();
+                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentTypeStr);
             }
             else if (this.HasParameters)
             {
-                webRequest.ContentType = "application/x-www-form-urlencoded";
+                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
                 this.RequestBody = this.EncodeParameters();
             }
             else if (this.HasBody)
             {
-                webRequest.ContentType = this.RequestContentType;
+                request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(this.RequestContentType);
             }
         }
 
@@ -340,7 +355,7 @@ namespace MiniRestSharpCore
             this.WriteStringTo(requestStream, GetMultipartFooter());
         }
 
-        private void ExtractResponseData(HttpResponse response, HttpWebResponse webResponse)
+        private void ExtractResponseData(HttpResponse response, NetCore11HttpResponse webResponse)
         {
             using (webResponse)
             {

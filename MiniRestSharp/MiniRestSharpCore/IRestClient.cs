@@ -31,11 +31,11 @@ namespace MiniRestSharpCore
     {
         CookieContainer CookieContainer { get; set; }
 
+        int? MaxRedirects { get; set; }
+
         string UserAgent { get; set; }
 
         int Timeout { get; set; }
-
-        int ReadWriteTimeout { get; set; }
 
         bool UseSynchronizationContext { get; set; }
 
@@ -46,6 +46,8 @@ namespace MiniRestSharpCore
         Encoding Encoding { get; set; }
 
         IList<Parameter> DefaultParameters { get; }
+
+        bool FollowRedirects { get; set; }
 
         Uri BuildUri(IRestRequest request);
 
