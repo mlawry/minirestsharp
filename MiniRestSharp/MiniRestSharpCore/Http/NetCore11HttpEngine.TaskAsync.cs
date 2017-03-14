@@ -80,20 +80,16 @@ namespace MiniRestSharpCore
                 if (v.ToLowerInvariant().Contains("keep-alive"))
                 {
                     //if a user sets the connection header explicitly to "keep-alive" then we set the field on HttpWebRequest
-                    r.Headers["Connection"] = "keep-alive";
+                    r.Headers.Connection.Add("keep-alive");
                 }
                 else
                 {
                     //if "Connection" is specified as anything else, we turn off keep alive functions
-                    r.Headers.Remove("Connection");
+                    r.Headers.Connection.Clear();
                 }
             });
-            this.restrictedHeaderActions.Add("Content-Length", (r, v) => r.Headers[HttpRequestHeader.ContentLength] = v);
-            this.restrictedHeaderActions.Add("Expect", (r, v) => r.Headers[HttpRequestHeader.Expect] = v);
-            this.restrictedHeaderActions.Add("If-Modified-Since", (r, v) => r.Headers[HttpRequestHeader.IfModifiedSince] = Convert.ToDateTime(v).ToString("r")); // RFC1123 pattern.
-            this.restrictedHeaderActions.Add("Referer", (r, v) => r.Headers[HttpRequestHeader.Referer] = v);
-            this.restrictedHeaderActions.Add("Transfer-Encoding", (r, v) => r.Headers[HttpRequestHeader.TransferEncoding] = v);
-            this.restrictedHeaderActions.Add("User-Agent", (r, v) => r.Headers[HttpRequestHeader.UserAgent] = v);
+            // Implicit conversion from DateTime to DateTimeOffset
+            this.restrictedHeaderActions.Add("If-Modified-Since", (r, v) => r.Headers.IfModifiedSince = Convert.ToDateTime(v));
         }
 
         private void ExtractErrorResponse(HttpResponse httpResponse, Exception ex)

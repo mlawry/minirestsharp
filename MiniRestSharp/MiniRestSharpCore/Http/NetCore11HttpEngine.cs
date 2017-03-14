@@ -23,6 +23,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -160,7 +162,7 @@ namespace MiniRestSharpCore
             this.Files = new List<HttpFile>();
             this.Parameters = new List<HttpParameter>();
             this.Cookies = new List<HttpCookie>();
-            this.restrictedHeaderActions = new Dictionary<string, Action<HttpWebRequest, string>>(
+            this.restrictedHeaderActions = new Dictionary<string, Action<HttpRequestMessage, string>>(
                 StringComparer.OrdinalIgnoreCase);
 
             this.AddSharedHeaderActions();
@@ -171,11 +173,8 @@ namespace MiniRestSharpCore
 
         private void AddSharedHeaderActions()
         {
-            this.restrictedHeaderActions.Add("Accept", (r, v) => r.Accept = v);
-            this.restrictedHeaderActions.Add("Content-Type", (r, v) => r.ContentType = v);
             this.restrictedHeaderActions.Add("Date", (r, v) => { /* Set by system */ });
             this.restrictedHeaderActions.Add("Host", (r, v) => { /* Set by system */ });
-
             this.restrictedHeaderActions.Add("Range", AddRange);
         }
 
@@ -207,22 +206,58 @@ namespace MiniRestSharpCore
             return string.Format("--{0}--{1}", FORM_BOUNDARY, LINE_BREAK);
         }
 
-        private readonly IDictionary<string, Action<HttpWebRequest, string>> restrictedHeaderActions;
+        private readonly IDictionary<string, Action<HttpRequestMessage, string>> restrictedHeaderActions;
 
         // handle restricted headers the .NET way - thanks @dimebrain!
         // http://msdn.microsoft.com/en-us/library/system.net.httpwebrequest.headers.aspx
-        private void AppendHeaders(HttpWebRequest webRequest)
+        private void AppendHeaders(HttpRequestMessage request)
         {
             foreach (HttpHeader header in this.Headers)
             {
                 if (this.restrictedHeaderActions.ContainsKey(header.Name))
                 {
-                    this.restrictedHeaderActions[header.Name].Invoke(webRequest, header.Value);
+                    this.restrictedHeaderActions[header.Name].Invoke(request, header.Value);
                 }
                 else
                 {
-                    webRequest.Headers[header.Name] = header.Value;
+                    // HttpRequestMessage requires some well-known headers to appear in the Content property rather than the Headers property.
+                    if (IsHttpContentHeader(header.Name))
+                    {
+                        request.Content.Headers.TryAddWithoutValidation(header.Name, header.Value);
+                    }
+                    else
+                    {
+                        request.Headers.TryAddWithoutValidation(header.Name, header.Value);
+                    }
                 }
+            }
+        }
+
+        private static bool IsHttpContentHeader(string headerName)
+        {
+            if (headerName == null)
+            {
+                throw new ArgumentNullException(nameof(headerName));
+            }
+            else if (
+                headerName.Equals("Allow", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Disposition", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Encoding", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Language", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Length", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Location", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-MD5", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Range", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Content-Type", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Expires", StringComparison.OrdinalIgnoreCase) ||
+                headerName.Equals("Last-Modified", StringComparison.OrdinalIgnoreCase)
+                )
+            {
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
@@ -387,7 +422,7 @@ namespace MiniRestSharpCore
         }
 
 
-        private static void AddRange(HttpWebRequest r, string range)
+        private static void AddRange(HttpRequestMessage r, string range)
         {
             Match m = Regex.Match(range, "(\\w+)=(\\d+)-(\\d+)$");
 
@@ -400,7 +435,12 @@ namespace MiniRestSharpCore
             int from = Convert.ToInt32(m.Groups[2].Value);
             int to = Convert.ToInt32(m.Groups[3].Value);
 
-            r.Headers[HttpRequestHeader.Range] = string.Format("bytes={0}-{1}", rangeSpecifier, from, to);
+            if (!"bytes".Equals(rangeSpecifier, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException("Only the 'bytes' range specifier is supported.");
+            }
+
+            r.Headers.Range = new RangeHeaderValue(from, to);
         }
 
     }
