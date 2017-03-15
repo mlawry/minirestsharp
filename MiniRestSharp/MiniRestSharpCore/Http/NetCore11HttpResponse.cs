@@ -11,9 +11,9 @@ namespace MiniRestSharpCore.Http
     /// <summary>
     /// Equivalent to HttpWebResponse.
     /// </summary>
-    internal class NetCore11HttpResponse : WebResponse
+    public class NetCore11HttpResponse : WebResponse
     {
-        private const string FIELD_SET_COOKIE = "Set-Cookie";
+        protected const string FIELD_SET_COOKIE = "Set-Cookie";
 
 
         private HttpResponseMessage mResponse;
@@ -22,9 +22,9 @@ namespace MiniRestSharpCore.Http
         private CookieCollection mCookies;
 
 
-        internal NetCore11HttpResponse(HttpResponseMessage responseMessage)
+        public NetCore11HttpResponse(HttpResponseMessage responseMessage)
         {
-            this.mResponse = responseMessage;
+            mResponse = responseMessage;
         }
 
 
@@ -56,6 +56,10 @@ namespace MiniRestSharpCore.Http
         }
 
 
+        /// <summary>
+        /// Returns the cookies found Set-Cookie headers (RFC 2109) of server's response message.
+        /// Does NOT support Set-Cookie2 headers (RFC 2965).
+        /// </summary>
         public virtual CookieCollection Cookies
         {
             get
@@ -71,10 +75,8 @@ namespace MiniRestSharpCore.Http
                         {
                             foreach (string setCookieHeader in setCookieValues)
                             {
-                                Dictionary<string, string> cookieDict = DecodeSetCookie(setCookieHeader);
-
-                                var cookie = new Cookie();
-                                cookie.
+                                Cookie cookie = DecodeSetCookie(setCookieHeader);
+                                mCookies.Add(cookie);
                             }
                         }
                     }
@@ -119,7 +121,7 @@ namespace MiniRestSharpCore.Http
         /// <summary>
         /// Returns all header values.
         /// </summary>
-        public Dictionary<string, IEnumerable<string>> Headers2
+        public virtual Dictionary<string, IEnumerable<string>> Headers2
         {
             get
             {
@@ -158,7 +160,7 @@ namespace MiniRestSharpCore.Http
         }
 
 
-        public HttpStatusCode StatusCode {
+        public virtual HttpStatusCode StatusCode {
             get
             {
                 VerifyDisposed();
@@ -167,7 +169,7 @@ namespace MiniRestSharpCore.Http
         }
 
 
-        public string StatusDescription
+        public virtual string StatusDescription
         {
             get
             {
@@ -214,42 +216,111 @@ namespace MiniRestSharpCore.Http
 
 
         /// <summary>
-        /// Decodes the Set-Cookie header string in a HTTP response into key value pairs, where the key is attribute name
-        /// and value is attribute value. If cookieHeaderString is null or invalid, returns empty dictionary.
-        /// If attribute does not have a value (e.g. HttpOnly), then an empty string will be used as the value.
-        /// Does not return null.
+        /// Decodes the Set-Cookie header string (RFC 2109).
+        /// Returns null if the string is not valid.
         /// </summary>
-        private static List<KeyValuePair<string, string>> DecodeSetCookie(string setCookieHeaderString)
+        protected static Cookie DecodeSetCookie(string setCookieHeaderString)
         {
-            var result = new List<KeyValuePair<string, string>>();
-
             if (string.IsNullOrEmpty(setCookieHeaderString))
             {
-                return result;
+                return null;
             }
 
             string[] keyValueArray = setCookieHeaderString.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
             if (keyValueArray == null || keyValueArray.Length == 0)
             {
-                return result;
+                return null;
             }
+
+            var result = new Cookie()
+            {
+                HttpOnly = false,
+                Secure = false
+            };
+            bool isFirstLoop = true;
 
             foreach (string keyValuePair in keyValueArray)
             {
                 string trimmedCookieItem = keyValuePair.Trim(' ');
                 string[] kvPair = trimmedCookieItem.Split(new char[] { '=' }, StringSplitOptions.RemoveEmptyEntries);
-                if (kvPair != null && kvPair.Length == 2)
+
+                if (isFirstLoop)
                 {
-                    result[kvPair[0]] = kvPair[1];
+                    isFirstLoop = false;
+                    // This must be the cookie NAME=VALUE pair, look to see if it is an existing cookie.
+                    if (kvPair == null || kvPair.Length != 2)
+                    {
+                        return null; // Invalid Set-Cookie string.
+                    }
+                    result.Name = kvPair[0];
+                    result.Value = kvPair[1];
                 }
-                else if (kvPair != null && kvPair.Length == 1)
+                else
                 {
-                    // Attribute with just a key, e.g. HttpOnly
-                    result[kvPair[0]] = "";
+                    UpdateCookieAttributes(kvPair, result);
                 }
             }
 
             return result;
+        }
+
+
+        private static void UpdateCookieAttributes(string[] kvPair, Cookie result)
+        {
+            if (kvPair != null && kvPair.Length == 2)
+            {
+                // This is an attribute=value pair.
+                if ("Comment".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Comment = kvPair[1];
+                }
+                else if ("Domain".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Domain = kvPair[1];
+                }
+                else if ("Max-Age".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    int deltaSeconds;
+                    if (int.TryParse(kvPair[1], out deltaSeconds))
+                    {
+                        if (deltaSeconds == 0)
+                        {
+                            // Expires immediately. Expired property is calculated from Expires DateTime.
+                            result.Expires = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            result.Expires = result.TimeStamp + TimeSpan.FromSeconds(deltaSeconds);
+                        }
+                    }
+                }
+                else if ("Path".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Path = kvPair[1];
+                }
+                else if ("Version".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Version = 0;
+                    int ver;
+                    if (int.TryParse(kvPair[1], out ver))
+                    {
+                        result.Version = ver;
+                    }
+                }
+
+            }
+            else if (kvPair != null && kvPair.Length == 1)
+            {
+                // Attribute with just a key, e.g. HttpOnly
+                if ("Secure".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.Secure = true;
+                }
+                else if ("HttpOnly".Equals(kvPair[0], StringComparison.OrdinalIgnoreCase))
+                {
+                    result.HttpOnly = true;
+                }
+            }
         }
 
     }

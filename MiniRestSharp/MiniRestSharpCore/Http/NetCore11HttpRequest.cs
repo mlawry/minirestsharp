@@ -9,9 +9,9 @@ namespace MiniRestSharpCore.Http
     /// <summary>
     /// Equivalent to HttpWebRequest.
     /// </summary>
-    internal class NetCore11HttpRequest
+    public class NetCore11HttpRequest
     {
-        internal NetCore11HttpRequest(string method, Uri url)
+        public NetCore11HttpRequest(string method, Uri url)
         {
             this.RequestHandler = new HttpClientHandler();
             this.RequestClient = new HttpClient(this.RequestHandler);
@@ -24,17 +24,17 @@ namespace MiniRestSharpCore.Http
         }
 
 
-        internal HttpClient RequestClient { get; private set; }
-        internal HttpClientHandler RequestHandler { get; private set; }
-        internal HttpRequestMessage RequestMessage { get; private set; }
+        public HttpClient RequestClient { get; private set; }
+        public HttpClientHandler RequestHandler { get; private set; }
+        public HttpRequestMessage RequestMessage { get; private set; }
 
-        private MemoryStream EntityBodyStream { get; set; }
+        protected MemoryStream EntityBodyStream { get; set; }
 
 
         /// <summary>
         /// Returns the underlying MemoryStream that represents the entity-body.
         /// </summary>
-        internal Stream GetRequestStreamAsync()
+        public Stream GetRequestStreamAsync()
         {
             return this.EntityBodyStream;
         }
@@ -44,7 +44,7 @@ namespace MiniRestSharpCore.Http
         /// Performs a HTTP action to get the response to this request.
         /// </summary>
         /// <returns></returns>
-        internal async Task<NetCore11HttpResponse> GetResponseAsync()
+        public async Task<NetCore11HttpResponse> GetResponseAsync()
         {
             // Since most people will use IRestResponse.GetContent(), we should read the entire response including entity-body.
             Task<HttpResponseMessage> sendRequestTask =
