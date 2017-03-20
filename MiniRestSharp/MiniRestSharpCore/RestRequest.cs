@@ -476,11 +476,6 @@ namespace MiniRestSharpCore
         public int Timeout { get; set; }
 
         /// <summary>
-        /// The number of milliseconds before the writing or reading times out.  This timeout value overrides a timeout set on the RestClient.
-        /// </summary>
-        public int ReadWriteTimeout { get; set; }
-
-        /// <summary>
         /// Internal Method so that RestClient can increase the number of attempts
         /// </summary>
         public void IncreaseNumAttempts()

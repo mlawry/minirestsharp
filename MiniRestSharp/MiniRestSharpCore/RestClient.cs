@@ -436,6 +436,9 @@ namespace MiniRestSharpCore
                 http.Timeout = timeout;
             }
 
+            http.FollowRedirects = this.FollowRedirects;
+            http.MaxRedirects = this.MaxRedirects;
+
             if (request.Credentials != null)
             {
                 http.Credentials = request.Credentials;

@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 
 namespace MiniRestSharpCore.Http
@@ -18,9 +21,7 @@ namespace MiniRestSharpCore.Http
             this.RequestMessage = new HttpRequestMessage(new HttpMethod(method), url);
 
             // Must set a HttpContent here to allow HttpContentHeader to be set.
-            // Use StreamContent with MemoryStream to allow the entity-body to be added later via a stream.
-            this.EntityBodyStream = new MemoryStream(4096);
-            this.RequestMessage.Content = new StreamContent(this.EntityBodyStream);
+            this.RequestMessage.Content = new ByteArrayContent(new byte[0]);
         }
 
 
@@ -28,15 +29,13 @@ namespace MiniRestSharpCore.Http
         public HttpClientHandler RequestHandler { get; private set; }
         public HttpRequestMessage RequestMessage { get; private set; }
 
-        protected MemoryStream EntityBodyStream { get; set; }
-
 
         /// <summary>
         /// Returns the underlying MemoryStream that represents the entity-body.
         /// </summary>
         public Stream GetRequestStreamAsync()
         {
-            return this.EntityBodyStream;
+            return new InMemoryRequestStream(this.RequestMessage);
         }
 
 
@@ -64,5 +63,68 @@ namespace MiniRestSharpCore.Http
 
             return response;
         }
+
+
+        /// <summary>
+        /// A helper class to cache entity-body content in memory and write to the given
+        /// HttpRequestMessage when this stream is disposed.
+        /// </summary>
+        private class InMemoryRequestStream : MemoryStream
+        {
+            internal InMemoryRequestStream(HttpRequestMessage requestMessage) : base(4096)
+            {
+                if (requestMessage == null)
+                {
+                    throw new ArgumentNullException(nameof(requestMessage));
+                }
+                this.RequestMessage = requestMessage;
+            }
+
+            public HttpRequestMessage RequestMessage { get; private set; }
+
+            protected override void Dispose(bool disposing)
+            {
+                base.Dispose(disposing);
+
+                // As part of disposing this stream, we have to write the bytes to the request message.
+                var newHttpContent = new ByteArrayContent(ToArray());
+
+                // But first copy over the headers because they may have already been assigned to the existing content.
+                // (Luckily HttpContent only has 1 property we have to copy, just the Headers.)
+                CopyContentHeaders(this.RequestMessage?.Content?.Headers, newHttpContent.Headers);
+
+                // Change the Content property.
+                this.RequestMessage.Content = newHttpContent;
+
+                if (disposing)
+                {
+                    this.RequestMessage = null; // release reference.
+                }
+            }
+
+
+            private static void CopyContentHeaders(HttpContentHeaders fromHeaders, HttpContentHeaders toHeaders)
+            {
+                if (fromHeaders == null || toHeaders == null)
+                {
+                    return;
+                }
+
+                foreach (KeyValuePair<string, IEnumerable<string>> kvPair in fromHeaders)
+                {
+                    // Apparently you cannot use the multi-value Add() method to add single values.
+                    int valueCount = kvPair.Value.Count();
+                    if (valueCount == 1)
+                    {
+                        toHeaders.Add(kvPair.Key, kvPair.Value.First());
+                    }
+                    else if (valueCount > 1)
+                    {
+                        toHeaders.Add(kvPair.Key, kvPair.Value);
+                    }
+                }
+            }
+        }
+
     }
 }
