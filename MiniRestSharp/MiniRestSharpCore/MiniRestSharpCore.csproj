@@ -9,9 +9,9 @@
     <Description>A cut down version of the RestSharp API for .NET Core 1.1.</Description>
     <PackageLicenseUrl>https://github.com/mlawry/minirestsharp/blob/master/LICENSE</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/mlawry/minirestsharp</PackageProjectUrl>
-    <AssemblyVersion>1.1.1.0</AssemblyVersion>
-    <FileVersion>1.1.1.0</FileVersion>
-    <Version>1.1.1</Version>
+    <AssemblyVersion>1.1.2.0</AssemblyVersion>
+    <FileVersion>1.1.2.0</FileVersion>
+    <Version>1.1.2</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
