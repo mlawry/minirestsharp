@@ -1,6 +1,6 @@
 # mini-restsharp
 
-A cut down version of the [RestSharp](http://github.com/restsharp/RestSharp) API for .NET Core 1.1.
+A cut down version of the [RestSharp](http://github.com/restsharp/RestSharp) API for .NET Core App 1.1 (netcoreapp1.1).
 
 The code is based on commit e7c65df751427298cb59f5456bbf1f59967996be (27 Apr 2016) from the *master* branch.
 
