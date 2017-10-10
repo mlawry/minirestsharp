@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>YTML.MiniRestSharp</PackageId>
+    <Version>1.1.2</Version>
+    <Description>A cut down version of the RestSharp API for .NET Standard 2.0.</Description>
+    <PackageLicenseUrl>https://github.com/mlawry/minirestsharp/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/mlawry/minirestsharp</PackageProjectUrl>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\MiniRestSharp.xml</DocumentationFile>
+  </PropertyGroup>
+
+</Project>
