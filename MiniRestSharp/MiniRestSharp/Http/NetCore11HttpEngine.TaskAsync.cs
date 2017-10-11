@@ -134,6 +134,20 @@ namespace MiniRestSharpCore.Http
         {
             try
             {
+                // Some methods do not allow entity-body in request, so we must remove the HttpContent.
+                // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods for which method allows/disallows entity-body.
+                // We need to do this because in the constructor of NetCore11HttpRequest, we always set a HttpContent to make
+                // programming easier. In netstandard2.0, the framework does not allow HttpContent for methods such as GET.
+                HttpMethod requestMethod = request.RequestMessage.Method;
+                if (requestMethod == HttpMethod.Delete ||
+                    requestMethod == HttpMethod.Get ||
+                    requestMethod == HttpMethod.Head ||
+                    requestMethod == HttpMethod.Options)
+                {
+                    // Will also remove any HttpContent-specific headers that may have been set erroneously.
+                    request.RequestMessage.Content = null;
+                }
+
                 return await request.GetResponseAsync();
             }
             catch (WebException ex)

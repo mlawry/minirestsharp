@@ -284,7 +284,7 @@ namespace MiniRestSharpCore.Http
 
             if (handler.CookieContainer == null || handler.CookieContainer.Count == 0)
             {
-                handler.CookieContainer = null;
+                //handler.CookieContainer = null; // In netstandard2.0 this property cannot be set to null.
                 handler.UseCookies = false;
             }
             else
