@@ -53,6 +53,8 @@ namespace MiniRestSharpCore
 
         void AddHandler(string contentType, IDeserializer deserializer);
 
+        void AddHandler(IEnumerable<string> contentTypes, IDeserializer deserializer);
+
         void RemoveHandler(string contentType);
 
         void ClearHandlers();

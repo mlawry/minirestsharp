@@ -166,19 +166,24 @@ namespace MiniRestSharpCore
         /// </summary>
         public IList<Parameter> DefaultParameters { get; private set; }
 
-        public void AddHandler(string[] contentTypeArray, IDeserializer deserializer)
+        /// <summary>
+        /// Registers multiple content handlers to process response content
+        /// </summary>
+        /// <param name="contentTypes">MIME content types of the response content</param>
+        /// <param name="deserializer">Deserializer to use to process content</param>
+        public void AddHandler(IEnumerable<string> contentTypes, IDeserializer deserializer)
         {
-            if (contentTypeArray == null)
+            if (contentTypes == null)
             {
-                throw new ArgumentNullException("contentTypeArray");
+                throw new ArgumentNullException(nameof(contentTypes));
             }
 
             if (deserializer == null)
             {
-                throw new ArgumentNullException("deserializer");
+                throw new ArgumentNullException(nameof(deserializer));
             }
 
-            foreach (string contentType in contentTypeArray)
+            foreach (string contentType in contentTypes)
             {
                 AddHandler(contentType, deserializer);
             }
