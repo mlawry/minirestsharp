@@ -12,9 +12,24 @@ namespace MiniRestSharpCore.Http
     /// <summary>
     /// Equivalent to HttpWebRequest.
     /// </summary>
-    public class NetCore11HttpRequest
+    public class NetStd20HttpRequest
     {
-        public NetCore11HttpRequest(string method, Uri url)
+        /// <summary>
+        /// For use by subclasses.
+        /// </summary>
+        protected NetStd20HttpRequest()
+        {
+
+        }
+
+
+        /// <summary>
+        /// Assigns a new <see cref="HttpClientHandler"/> instance to <see cref="RequestHandler"/> and
+        /// creates a new <see cref="HttpClient"/> using the <see cref="HttpClient(HttpMessageHandler)"/>
+        /// constructor, passing in the <see cref="HttpClientHandler"/> instance as the constructor parameter.
+        /// Initialises a new <see cref="HttpRequestMessage"/> as <see cref="RequestMessage"/> as well.
+        /// </summary>
+        public NetStd20HttpRequest(string method, Uri url)
         {
             this.RequestHandler = new HttpClientHandler();
             this.RequestClient = new HttpClient(this.RequestHandler);
@@ -25,9 +40,9 @@ namespace MiniRestSharpCore.Http
         }
 
 
-        public HttpClient RequestClient { get; private set; }
-        public HttpClientHandler RequestHandler { get; private set; }
-        public HttpRequestMessage RequestMessage { get; private set; }
+        public HttpClient RequestClient { get; protected set; }
+        public HttpClientHandler RequestHandler { get; protected set; }
+        public HttpRequestMessage RequestMessage { get; protected set; }
 
 
         /// <summary>
@@ -43,14 +58,14 @@ namespace MiniRestSharpCore.Http
         /// Performs a HTTP action to get the response to this request.
         /// </summary>
         /// <returns></returns>
-        public async Task<NetCore11HttpResponse> GetResponseAsync()
+        public async Task<NetStd20HttpResponse> GetResponseAsync()
         {
             // Since most people will use IRestResponse.GetContent(), we should read the entire response including entity-body.
             Task<HttpResponseMessage> sendRequestTask =
                 this.RequestClient.SendAsync(this.RequestMessage, HttpCompletionOption.ResponseContentRead);
             HttpResponseMessage responseMessage = await sendRequestTask.ConfigureAwait(false);
 
-            var response = new NetCore11HttpResponse(responseMessage);
+            var response = new NetStd20HttpResponse(responseMessage);
 
             if (!responseMessage.IsSuccessStatusCode)
             {

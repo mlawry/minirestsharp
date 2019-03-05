@@ -31,7 +31,7 @@ namespace MiniRestSharpCore.Http
     /// HttpWebRequest wrapper (sync methods)
     /// This class is based on RestSharp's Http.Sync.cs file.
     /// </summary>
-    public partial class NetCore11HttpEngine
+    public partial class NetStd20HttpEngine
     {
         /// <summary>
         /// Execute a GET-style request with the specified HTTP Method.  
@@ -53,9 +53,18 @@ namespace MiniRestSharpCore.Http
             return await this.PostPutInternal(httpMethod.ToUpperInvariant());
         }
 
+        /// <summary>
+        /// Override this method to provide your own implementation of creating a new NetStd20HttpRequest instance.
+        /// </summary>
+        protected virtual NetStd20HttpRequest CreateWebRequest(string method, Uri url)
+        {
+            return new NetStd20HttpRequest(method, url);
+        }
+
         private async Task<HttpResponse> GetStyleMethodInternal(string method)
         {
-            NetCore11HttpRequest request = this.ConfigureWebRequest(method, this.Url);
+            NetStd20HttpRequest request = this.CreateWebRequest(method, this.Url);
+            this.ConfigureWebRequest(request);
 
             if (this.HasBody && (method == "DELETE" || method == "OPTIONS"))
             {
@@ -68,7 +77,8 @@ namespace MiniRestSharpCore.Http
 
         private async Task<HttpResponse> PostPutInternal(string method)
         {
-            NetCore11HttpRequest request = this.ConfigureWebRequest(method, this.Url);
+            NetStd20HttpRequest request = this.CreateWebRequest(method, this.Url);
+            this.ConfigureWebRequest(request);
 
             this.PreparePostBody(request.RequestMessage);
 
@@ -112,13 +122,13 @@ namespace MiniRestSharpCore.Http
             httpResponse.ResponseStatus = ResponseStatus.Error;
         }
 
-        private async Task<HttpResponse> GetResponse(NetCore11HttpRequest request)
+        private async Task<HttpResponse> GetResponse(NetStd20HttpRequest request)
         {
             HttpResponse response = new HttpResponse { ResponseStatus = ResponseStatus.None };
 
             try
             {
-                NetCore11HttpResponse webResponse = await GetRawResponse(request);
+                NetStd20HttpResponse webResponse = await GetRawResponse(request);
 
                 this.ExtractResponseData(response, webResponse);
             }
@@ -130,13 +140,13 @@ namespace MiniRestSharpCore.Http
             return response;
         }
 
-        private static async Task<NetCore11HttpResponse> GetRawResponse(NetCore11HttpRequest request)
+        private static async Task<NetStd20HttpResponse> GetRawResponse(NetStd20HttpRequest request)
         {
             try
             {
                 // Some methods do not allow entity-body in request, so we must remove the HttpContent.
                 // See https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods for which method allows/disallows entity-body.
-                // We need to do this because in the constructor of NetCore11HttpRequest, we always set a HttpContent to make
+                // We need to do this because in the constructor of NetStd20HttpRequest, we always set a HttpContent to make
                 // programming easier. In netstandard2.0, the framework does not allow HttpContent for methods such as GET.
                 HttpMethod requestMethod = request.RequestMessage.Method;
                 if (requestMethod == HttpMethod.Delete ||
@@ -158,7 +168,7 @@ namespace MiniRestSharpCore.Http
                 // transport exception (ex: connection timeout) and
                 // rethrow the exception
 
-                var exResponse = ex.Response as NetCore11HttpResponse;
+                var exResponse = ex.Response as NetStd20HttpResponse;
                 if (exResponse != null)
                 {
                     return exResponse;
@@ -168,7 +178,7 @@ namespace MiniRestSharpCore.Http
             }
         }
 
-        private void WriteRequestBody(NetCore11HttpRequest webRequest)
+        private void WriteRequestBody(NetStd20HttpRequest webRequest)
         {
             if (this.HasBody || this.HasFiles || this.AlwaysMultipartFormData)
             {
@@ -192,10 +202,8 @@ namespace MiniRestSharpCore.Http
             }
         }
 
-        private NetCore11HttpRequest ConfigureWebRequest(string method, Uri url)
+        private NetStd20HttpRequest ConfigureWebRequest(NetStd20HttpRequest request)
         {
-            var request = new NetCore11HttpRequest(method, url);
-
             ////////// 1. Configure HttpRequestMessage.
             this.AppendHeaders(request.RequestMessage);
 
@@ -211,7 +219,7 @@ namespace MiniRestSharpCore.Http
             }
 
             ////////// 2. Configure HttpClientHandler
-            this.AppendCookies(request.RequestHandler, url);
+            this.AppendCookies(request.RequestHandler, request.RequestMessage.RequestUri);
 
             // This matches with request.Headers.TE header.
             request.RequestHandler.AutomaticDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None;

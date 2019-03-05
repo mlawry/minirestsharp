@@ -11,7 +11,7 @@ namespace MiniRestSharpCore.Http
     /// <summary>
     /// Equivalent to HttpWebResponse.
     /// </summary>
-    public class NetCore11HttpResponse : WebResponse
+    public class NetStd20HttpResponse : WebResponse
     {
         protected const string FIELD_SET_COOKIE = "Set-Cookie";
 
@@ -22,7 +22,7 @@ namespace MiniRestSharpCore.Http
         private CookieCollection mCookies;
 
 
-        public NetCore11HttpResponse(HttpResponseMessage responseMessage)
+        public NetStd20HttpResponse(HttpResponseMessage responseMessage)
         {
             mResponse = responseMessage;
         }

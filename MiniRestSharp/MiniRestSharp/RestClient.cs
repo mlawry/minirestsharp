@@ -67,6 +67,8 @@ namespace MiniRestSharpCore
 
         /// <summary>
         /// Factory implementation to create a network communication engine.
+        /// Currently defaults to an implementation whose <see cref="IHttpFactory.Create"/> method returns
+        /// a <see cref="Http.NetStd20HttpEngine"/> object.
         /// </summary>
         public IHttpFactory HttpFactory = new Http.HttpEngineFactory();
         

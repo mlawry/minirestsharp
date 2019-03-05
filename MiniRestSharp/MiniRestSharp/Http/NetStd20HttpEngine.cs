@@ -34,7 +34,7 @@ namespace MiniRestSharpCore.Http
     /// HttpWebRequest wrapper.
     /// This class is based on RestSharp's Http.cs file.
     /// </summary>
-    public partial class NetCore11HttpEngine : IHttp
+    public partial class NetStd20HttpEngine : IHttp
     {
         private const string LINE_BREAK = "\r\n";
 
@@ -161,7 +161,7 @@ namespace MiniRestSharpCore.Http
         /// <summary>
         /// Default constructor
         /// </summary>
-        public NetCore11HttpEngine()
+        public NetStd20HttpEngine()
         {
             this.Headers = new List<HttpHeader>();
             this.Files = new List<HttpFile>();
@@ -355,11 +355,10 @@ namespace MiniRestSharpCore.Http
             this.WriteStringTo(requestStream, GetMultipartFooter());
         }
 
-        private void ExtractResponseData(HttpResponse response, NetCore11HttpResponse webResponse)
+        private void ExtractResponseData(HttpResponse response, NetStd20HttpResponse webResponse)
         {
             using (webResponse)
             {
-
                 response.ContentEncoding = webResponse.Headers[HttpResponseHeader.ContentEncoding];
                 response.Server = webResponse.Headers[HttpResponseHeader.Server];
 
