@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using MiniRestSharpCore.Serializers;
 
 namespace MiniRestSharpCore
@@ -98,6 +99,35 @@ namespace MiniRestSharpCore
         /// will be sent along to the server. The default is false.
         /// </summary>
         bool UseDefaultCredentials { get; set; }
+
+        /// <summary>
+        /// <para>
+        /// Returns a tuple if this request is to use a named <see cref="HttpClient"/>. Returns the name (Tuple.Item1) and
+        /// associated client (Tuple.Item2). The name is required to find the client's associated <see cref="HttpClientHandler"/>.
+        /// Returns null if a new <see cref="HttpClient"/> instance should be used for this request (old RestSharp behaviour).
+        /// </para>
+        /// <para>
+        /// To set this property, call <see cref="UseNamedHttpClient(IHttpClientFactory, string)"/>.
+        /// </para>
+        /// </summary>
+        Tuple<string, HttpClient> NamedHttpClient { get; }
+
+        /// <summary>
+        /// <para>
+        /// The old RestSharp behaviour is to create a new <see cref="HttpClient"/> (and associated <see cref="HttpClientHandler"/>)
+        /// for every HTTP request; however, doing so is not good from a resource re-use point of view. See for example
+        /// https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+        /// This method supports the (re-)use of named clients for .NET Core 2.1 and later.
+        /// </para>
+        /// <para>
+        /// This method is expected to call <see cref="IHttpClientFactory.CreateClient(string)"/> passing in <paramref name="name"/>
+        /// as the parameter. The named <see cref="HttpClient"/> returned by the method is expected to be returned by the
+        /// <see cref="NamedHttpClient"/> property together with the <paramref name="name"/>.
+        /// </para>
+        /// </summary>
+        /// <param name="httpClientFactory">Must not be null.</param>
+        /// <param name="name">Must not be null.</param>
+        void UseNamedHttpClient(IHttpClientFactory httpClientFactory, string name);
 
         /// <summary>
         /// Adds a file to the Files collection to be included with a POST or PUT request 
@@ -242,8 +272,14 @@ namespace MiniRestSharpCore
         /// <returns></returns>
         IRestRequest AddQueryParameter(string name, string value);
 
+        /// <summary>
+        /// A function to run prior to deserializing starting (e.g. change settings if error encountered)
+        /// </summary>
         Action<IRestResponse> OnBeforeDeserialization { get; set; }
 
+        /// <summary>
+        /// Internal Method so that RestClient can increase the number of attempts
+        /// </summary>
         void IncreaseNumAttempts();
     }
 }

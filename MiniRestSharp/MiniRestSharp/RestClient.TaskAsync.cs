@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace MiniRestSharpCore
@@ -49,7 +50,19 @@ namespace MiniRestSharpCore
 
             try
             {
-                IHttp http = this.HttpFactory.Create();
+                IHttp http;
+
+                // If a named or typed client is to be used...
+                if (request.NamedHttpClient != null)
+                {
+                    (string name, HttpClient client) = request.NamedHttpClient;
+                    http = this.HttpFactory.Create(name);
+                    http.SetNamedHttpClient(name, client);
+                }
+                else
+                {
+                    http = this.HttpFactory.Create(null);
+                }
 
                 this.ConfigureHttp(request, http);
 

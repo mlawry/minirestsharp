@@ -24,15 +24,14 @@ namespace MiniRestSharpCore.Http
 
 
         /// <summary>
-        /// Assigns a new <see cref="HttpClientHandler"/> instance to <see cref="RequestHandler"/> and
-        /// creates a new <see cref="HttpClient"/> using the <see cref="HttpClient(HttpMessageHandler)"/>
-        /// constructor, passing in the <see cref="HttpClientHandler"/> instance as the constructor parameter.
-        /// Initialises a new <see cref="HttpRequestMessage"/> as <see cref="RequestMessage"/> as well.
+        /// Re-use a named <see cref="HttpClient"/> and its <see cref="HttpClientHandler"/>. It's normally not possible
+        /// to access the <see cref="HttpClientHandler"/> from the <see cref="HttpClient"/>, we had to do some
+        /// configuration magic to get access to the handler.
         /// </summary>
-        public NetStd20HttpRequest(string method, Uri url)
+        public NetStd20HttpRequest(HttpClient httpClient, NamedHttpClientHandlerWrapper httpClientHandler, string method, Uri url)
         {
-            this.RequestHandler = new HttpClientHandler();
-            this.RequestClient = new HttpClient(this.RequestHandler);
+            this.RequestHandler = httpClientHandler;
+            this.RequestClient = httpClient;
             this.RequestMessage = new HttpRequestMessage(new HttpMethod(method), url);
 
             // Must set a HttpContent here to allow HttpContentHeader to be set.
@@ -41,7 +40,7 @@ namespace MiniRestSharpCore.Http
 
 
         public HttpClient RequestClient { get; protected set; }
-        public HttpClientHandler RequestHandler { get; protected set; }
+        public NamedHttpClientHandlerWrapper RequestHandler { get; protected set; }
         public HttpRequestMessage RequestMessage { get; protected set; }
 
 

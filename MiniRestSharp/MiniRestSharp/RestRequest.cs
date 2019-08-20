@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -54,6 +55,11 @@ namespace MiniRestSharpCore
         /// will be sent along to the server. The default is false.
         /// </summary>
         public bool UseDefaultCredentials { get; set; }
+
+        /// <summary>
+        /// Can be assigned a named client for reuse purposes. Tuple.Item1 is the name.
+        /// </summary>
+        public Tuple<string, HttpClient> NamedHttpClient { get; private set; }
 
         /// <summary>
         /// Default constructor
@@ -110,6 +116,16 @@ namespace MiniRestSharpCore
                 : resource.OriginalString, method)
         {
             //resource.PathAndQuery not supported by Silverlight :(
+        }
+
+        /// <summary>
+        /// This method will call <see cref="IHttpClientFactory.CreateClient(string)"/> passing in <paramref name="name"/>
+        /// as the parameter. The named <see cref="HttpClient"/> returned by the method will be used to execute this
+        /// request's HTTP call. The <paramref name="name"/> is also retained by this object for internal use.
+        /// </summary>
+        public void UseNamedHttpClient(IHttpClientFactory httpClientFactory, string name)
+        {
+            this.NamedHttpClient = Tuple.Create(name, httpClientFactory.CreateClient(name));
         }
 
         /// <summary>

@@ -174,6 +174,14 @@ namespace MiniRestSharpCore.Http
             this.AddSyncHeaderActions();
         }
 
+        /// <summary>
+        /// This method throws NotImplementedException because named clients are not supported by this class.
+        /// </summary>
+        public virtual void SetNamedHttpClient(string name, HttpClient httpClient)
+        {
+            throw new NotImplementedException();
+        }
+
         partial void AddSyncHeaderActions();
 
         private void AddSharedHeaderActions()
@@ -266,23 +274,23 @@ namespace MiniRestSharpCore.Http
             }
         }
 
-        private void AppendCookies(HttpClientHandler handler, Uri requestUri)
+        private void AppendCookies(NamedHttpClientHandlerWrapper handler, Uri requestUri)
         {
             handler.CookieContainer = this.CookieContainer ?? new CookieContainer();
 
             foreach (HttpCookie httpCookie in this.Cookies)
             {
-                Cookie cookie = new Cookie
+                Func<Cookie> createCookie = () => new Cookie
                                 {
                                     Name = httpCookie.Name,
                                     Value = httpCookie.Value,
                                     Domain = requestUri.Host
                                 };
 
-                handler.CookieContainer.Add(new Uri(string.Format("{0}://{1}", requestUri.Scheme, requestUri.Host)), cookie);
+                handler.CookieContainer_Add(new Uri(string.Format("{0}://{1}", requestUri.Scheme, requestUri.Host)), createCookie);
             }
 
-            if (handler.CookieContainer == null || handler.CookieContainer.Count == 0)
+            if ((this.CookieContainer == null || this.CookieContainer.Count == 0) && this.Cookies.Count == 0)
             {
                 //handler.CookieContainer = null; // In netstandard2.0 this property cannot be set to null.
                 handler.UseCookies = false;

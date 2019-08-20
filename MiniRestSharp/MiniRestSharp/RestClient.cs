@@ -66,13 +66,6 @@ namespace MiniRestSharpCore
         }
 
         /// <summary>
-        /// Factory implementation to create a network communication engine.
-        /// Currently defaults to an implementation whose <see cref="IHttpFactory.Create"/> method returns
-        /// a <see cref="Http.NetStd20HttpEngine"/> object.
-        /// </summary>
-        public IHttpFactory HttpFactory = new Http.HttpEngineFactory();
-        
-        /// <summary>
         /// Maximum number of redirects to follow if FollowRedirects is true
         /// </summary>
         public int? MaxRedirects { get; set; }
@@ -120,11 +113,26 @@ namespace MiniRestSharpCore
         public Encoding Encoding { get; set; }
 
         /// <summary>
+        /// Factory implementation to create a network communication engine.
+        /// Currently defaults to an implementation whose <see cref="IHttpFactory.Create(string)"/> method returns
+        /// a new <see cref="Http.NetStd20HttpEngine"/> object.
+        /// </summary>
+        private IHttpFactory HttpFactory { get; }
+
+        /// <summary>
         /// Default constructor that registers default content handlers
         /// </summary>
-        public RestClient()
+        /// <param name="restSharpHttpFactory">This parameter typically provided by Dependency Injection.</param>
+        public RestClient(IHttpFactory restSharpHttpFactory)
         {
-            this.Encoding = Encoding.UTF8;
+            if (restSharpHttpFactory == null)
+            {
+                throw new ArgumentNullException(nameof(restSharpHttpFactory));
+            }
+
+            this.HttpFactory = restSharpHttpFactory;
+
+            this.Encoding = new UTF8Encoding(false); // Encoding.UTF8 emits byte order mark, which we don't want.
 
             this.ContentHandlers = new Dictionary<string, IDeserializer>();
             this.AcceptTypes = new List<string>();
@@ -133,29 +141,6 @@ namespace MiniRestSharpCore
             // There are no default handlers.
 
             this.FollowRedirects = true;
-        }
-
-        /// <summary>
-        /// Sets the BaseUrl property for requests made by this client instance
-        /// </summary>
-        /// <param name="baseUrl"></param>
-        public RestClient(Uri baseUrl) : this()
-        {
-            this.BaseUrl = baseUrl;
-        }
-
-        /// <summary>
-        /// Sets the BaseUrl property for requests made by this client instance
-        /// </summary>
-        /// <param name="baseUrl"></param>
-        public RestClient(string baseUrl) : this()
-        {
-            if (string.IsNullOrEmpty(baseUrl))
-            {
-                throw new ArgumentNullException("baseUrl");
-            }
-
-            this.BaseUrl = new Uri(baseUrl);
         }
 
         private IDictionary<string, IDeserializer> ContentHandlers { get; set; }

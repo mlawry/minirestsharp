@@ -54,11 +54,28 @@ namespace MiniRestSharpCore.Http
         }
 
         /// <summary>
+        /// <para>
+        /// Creates a new <see cref="HttpClientHandler"/> instance and add it to a new <see cref="NamedHttpClientHandlerWrapper"/>
+        /// instance; also creates a new <see cref="HttpClient"/> using the <see cref="HttpClient(HttpMessageHandler)"/>
+        /// constructor, passing in the <see cref="HttpClientHandler"/> instance as the constructor parameter.
+        /// </para>
+        /// <para>
+        /// Finally calls <see cref="NetStd20HttpRequest(HttpClient, NamedHttpClientHandlerWrapper, string, Uri)"/>
+        /// passing in the prepared objects as parameters.
+        /// </para>
+        /// <para>
         /// Override this method to provide your own implementation of creating a new NetStd20HttpRequest instance.
+        /// </para>
         /// </summary>
         protected virtual NetStd20HttpRequest CreateWebRequest(string method, Uri url)
         {
-            return new NetStd20HttpRequest(method, url);
+            var clientHandler = new HttpClientHandler();
+            var client = new HttpClient(clientHandler);
+
+            var wrapper = new NamedHttpClientHandlerWrapper();
+            wrapper.Handlers.Add(clientHandler);
+
+            return new NetStd20HttpRequest(client, wrapper, method, url);
         }
 
         private async Task<HttpResponse> GetStyleMethodInternal(string method)
@@ -202,7 +219,7 @@ namespace MiniRestSharpCore.Http
             }
         }
 
-        private NetStd20HttpRequest ConfigureWebRequest(NetStd20HttpRequest request)
+        protected virtual NetStd20HttpRequest ConfigureWebRequest(NetStd20HttpRequest request)
         {
             ////////// 1. Configure HttpRequestMessage.
             this.AppendHeaders(request.RequestMessage);

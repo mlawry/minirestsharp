@@ -20,6 +20,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -72,5 +73,22 @@ namespace MiniRestSharpCore
         Task<HttpResponse> AsPostTaskAsync(string httpMethod);
 
         Task<HttpResponse> AsGetTaskAsync(string httpMethod);
+
+        /// <summary>
+        /// <para>
+        /// The old RestSharp behaviour is to create a new <see cref="HttpClient"/> (and associated <see cref="HttpClientHandler"/>)
+        /// for every HTTP request; however, doing so is not good from a resource re-use point of view. See for example
+        /// https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests
+        /// This method supports the (re-)use of named clients for .NET Core 2.1 and later.
+        /// </para>
+        /// <para>
+        /// This method is expected to remember the named client set and use it to execute all future <see cref="IRestRequest"/>s.
+        /// </para>
+        /// </summary>
+        /// <param name="name">
+        /// The name of the named client, used to match up with the related <see cref="HttpClientHandler"/>. Must not be null.
+        /// </param>
+        /// <param name="httpClient">The named client itself. Must not be null.</param>
+        void SetNamedHttpClient(string name, HttpClient httpClient);
     }
 }
