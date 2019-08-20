@@ -14,23 +14,26 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <summary>
         /// Set up the MiniRestSharp library to work with named clients (and may be typed clients later on as well).
         /// This method also calls <see cref="HttpClientFactoryServiceCollectionExtensions.AddHttpClient(IServiceCollection)"/>.
+        /// This method also registers the <see cref="IRestClient"/> type with a transient implementation.
         /// </summary>
         public static IServiceCollection AddRestSharp(this IServiceCollection services)
         {
             services.AddHttpClient();
+            services.AddTransient<IRestClient, RestClient>();
             return services.AddSingleton<IHttpFactory, HttpEngineFactory>();
         }
 
 
         /// <summary>
-        /// You must use this method to add a named <see cref="HttpClient"/> if you want to use the named client
-        /// with the MiniRestSharp library.
+        /// Use this method to add a named <see cref="HttpClient"/> so that you can use the named client
+        /// with the MiniRestSharp library by calling <see cref="IRestRequest.UseNamedHttpClient(IHttpClientFactory, string)"/>.
         /// </summary>
         public static IHttpClientBuilder AddRestSharpClient(this IServiceCollection services, string name)
         {
             return services.AddHttpClient(name).ConfigurePrimaryHttpMessageHandler((IServiceProvider provider) =>
             {
-                // We know this works because we added it as a singleton in the method above.
+                // This method is typically called when the named HttpClient is created.
+                // We know HttpEngineFactory exists because we added it as a singleton in the method above.
                 var httpEngine = provider.GetService<IHttpFactory>() as HttpEngineFactory;
                 if (httpEngine == null)
                 {
