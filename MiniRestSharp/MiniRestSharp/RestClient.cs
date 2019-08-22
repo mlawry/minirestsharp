@@ -110,6 +110,10 @@ namespace MiniRestSharpCore
         /// </example>
         public virtual Uri BaseUrl { get; set; }
 
+        /// <summary>
+        /// For requests that send data in text over HTTP, this is the encoding used to convert .NET strings
+        /// into raw HTTP bytes. Also used to convert received bytes into a string e.g. in <see cref="IRestResponse.GetContent"/>.
+        /// </summary>
         public Encoding Encoding { get; set; }
 
         /// <summary>
@@ -152,6 +156,15 @@ namespace MiniRestSharpCore
         /// If specified in both client and request, the request wins
         /// </summary>
         public IList<Parameter> DefaultParameters { get; private set; }
+
+        /// <summary>
+        /// Convenience method to get back the <see cref="Authenticator"/> as a typed instance. Will throw
+        /// <see cref="InvalidCastException"/> if type is incorrect. Returns null if no Authenticator assigned.
+        /// </summary>
+        public TAuthImpl GetAuthenticator<TAuthImpl>() where TAuthImpl : IAuthenticator
+        {
+            return (TAuthImpl)this.Authenticator;
+        }
 
         /// <summary>
         /// Registers multiple content handlers to process response content
