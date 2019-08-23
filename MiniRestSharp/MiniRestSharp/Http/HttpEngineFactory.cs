@@ -58,7 +58,7 @@ namespace MiniRestSharpCore.Http
                 // with different set up (specifically, set ups that require different HttpClientHandler configurations).
 
                 // This call is thread-safe because mNamedHandlerWrappers is a ConcurrentDictionary.
-                NamedHttpClientHandlerWrapper wrapper = mNamedHandlerWrappers.GetOrAdd(namedClientName, ignored => new NamedHttpClientHandlerWrapper());
+                NamedHttpClientHandlerWrapper wrapper = mNamedHandlerWrappers.GetOrAdd(namedClientName, name => new NamedHttpClientHandlerWrapper(name));
                 return new NamedClientHttpEngine(namedClientName, wrapper);
             }
         }
@@ -82,14 +82,14 @@ namespace MiniRestSharpCore.Http
 
             // Since we cannot guarantee this method won't be called concurrently (e.g. multiple requests for the same named
             // client), we must make sure it is thread-safe. Luckily mNamedHandlerWrappers is a ConcurrentDictionary.
-            NamedHttpClientHandlerWrapper wrapper = mNamedHandlerWrappers.GetOrAdd(name, ignored => new NamedHttpClientHandlerWrapper());
+            NamedHttpClientHandlerWrapper wrapper = mNamedHandlerWrappers.GetOrAdd(name, nam => new NamedHttpClientHandlerWrapper(nam));
 
             // Add the handler to the wrapper for the given name. Wrapper object is NOT thread-safe so we must
             // synchronize on it before adding. An implication is that this may block if the same wrapper object is being
             // used (as NetStd20HttpRequest.RequestHandler) in the NamedClientHttpEngine.ConfigureWebRequest() method below.
             lock (wrapper)
             {
-                wrapper.Handlers.Add(httpClientHandler);
+                wrapper.Add(httpClientHandler);
             }
         }
 
@@ -162,6 +162,16 @@ namespace MiniRestSharpCore.Http
                 // The lock will prevent new handlers from being added in the HttpEngineFactory.AddNamedClientHandler() method above.
                 lock (wrapper)
                 {
+                    // By this point, it is an error if we do not have access to the HttpClientHandler associated with the named client.
+                    // Because we clear the wrapper at the end of this code block, wrapper may be empty if we had previously
+                    // configured the named HttpClientHandler already. The IsAlwaysEmpty property gets around this issue.
+                    if (wrapper.IsAlwaysEmpty)
+                    {
+                        throw new InvalidOperationException(string.Format(
+                            "HttpClientHandler for the named client '{0}' has not been registered with MiniRestSharp. Did you forget to call RestSharpServiceCollectionExtensions.AddRestSharpClient(IServiceCollection, string)?",
+                            wrapper.Name));
+                    }
+
                     // I've confirmed that the only place the wrapped HttpClientHandlers are configured is in this method.
                     NetStd20HttpRequest returnValue = base.ConfigureWebRequest(request);
 
@@ -170,7 +180,7 @@ namespace MiniRestSharpCore.Http
                     // get recycled by IHttpClientFactory and become configurable again. When this happens I think the
                     // RestSharpServiceCollectionExtensions system will end up calling HttpEngineFactory.AddNamedClientHandler()
                     // again, which will result in it being added to wrapper again for another round of configuration later.
-                    wrapper.Handlers.Clear();
+                    wrapper.Clear();
 
                     return returnValue;
                 }

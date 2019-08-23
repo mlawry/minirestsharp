@@ -72,8 +72,9 @@ namespace MiniRestSharpCore.Http
             var clientHandler = new HttpClientHandler();
             var client = new HttpClient(clientHandler);
 
-            var wrapper = new NamedHttpClientHandlerWrapper();
-            wrapper.Handlers.Add(clientHandler);
+            // Because we're not really using this wrapper with a named client, we set its name to null.
+            var wrapper = new NamedHttpClientHandlerWrapper(null);
+            wrapper.Add(clientHandler);
 
             return new NetStd20HttpRequest(client, wrapper, method, url);
         }
